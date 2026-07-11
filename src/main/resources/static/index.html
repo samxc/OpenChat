@@ -1,84 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-    <title>Chat Oasis</title>
-    <link rel="stylesheet" href="./css/styles.css" />
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css" integrity="sha384-B4dIYHKNBt8Bc12p+WXckhzcICo0wtJAoU8YZTY5qE0Id1GSseTk6S+L3BlXeVIU" crossorigin="anonymous">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/malihu-custom-scrollbar-plugin/3.1.5/jquery.mCustomScrollbar.min.css">
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/malihu-custom-scrollbar-plugin/3.1.5/jquery.mCustomScrollbar.min.js"></script>
-    <script type="text/javascript" src="https://momentjs.com/downloads/moment.min.js"></script>
-
-    <link rel="icon" type="image/png" sizes="32x32" href="./img/favicon-16x16.png">
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenChat</title>
+    <link rel="icon" type="image/png" sizes="16x16" href="./img/favicon-16x16.png">
+    <link rel="stylesheet" href="./css/styles.css">
 </head>
 <body>
 
-<div class="container-fluid h-100">
-
-    <div id="status" class="login">
-
+    <!-- ===== Login screen ===== -->
+    <div id="login" class="login-overlay">
+        <form id="login-form" class="login-card" autocomplete="off">
+            <div class="login-logo">💬</div>
+            <h1 class="login-title">OpenChat</h1>
+            <p class="login-subtitle">Pick a name to jump into the conversation.<br>No sign-up needed.</p>
+            <input id="username" class="login-input" type="text" placeholder="Enter a username" maxlength="20" autocomplete="off" required>
+            <button type="submit" class="login-button">Join chat</button>
+            <p id="login-error" class="login-error"></p>
+        </form>
     </div>
 
-    <div id="login">
-        <div class="main row justify-content-center h-100">
-            <form id="login-form" name="login-form">
-                <div class="input-group">
-                    <label for="username"></label><input id="username" type="text" class="form-control all-input" autocomplete="off" placeholder="Username" />
-                    <div class="input-group-append">
-                        <button class="fas fa-user-lock" type="submit"></button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+    <!-- ===== Chat screen ===== -->
+    <div id="chat-page" class="chat-shell hidden">
+        <header class="chat-header">
+            <span class="chat-hash">#</span>
+            <span class="chat-channel">open-chat</span>
+            <span class="chat-topic">Say hi to everyone online</span>
+        </header>
 
-    <p id="getMessage" style="color: white; font-family: 'Californian FB',sans-serif; font-size: x-large; text-align: center">
-        please, Pick a random name to login. no registration is required.<br>
-        if the page is refreshed after login, you will be
-        directed to the login page again, so make sure during the conversation not to refresh the page</p>
-
-
-    <div id="chat-page" class="hide main">
-        <div class="row justify-content-center h-100">
-
-            <div class="col-md-8 col-xl-6">
-                <div class="card">
-                    <div class="card-header">
-                        <div class="d-flex bd-highlight">
-                            <div class="chat-summary">
-                                <span>Open Chat</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card-body">
-
-                        <div id="chat">
-
-                        </div>
-
-                    </div>
-
-                    <form id="message-controls" name="message-controls" class="card-footer">
-                        <div class="input-group">
-                            <label for="message"></label><textarea id="message" class="form-control all-input" placeholder="Type your message..."></textarea>
-                            <div class="input-group-append">
-                                <button class="fas fa-location-arrow" type="submit"></button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
+        <main id="chat" class="chat-messages">
+            <div class="welcome">
+                <div class="welcome-icon">#</div>
+                <h2>Welcome to #open-chat</h2>
+                <p>This is the start of the channel. Be nice. 👋</p>
             </div>
-        </div>
+        </main>
+
+        <footer class="chat-composer">
+            <form id="message-form" class="composer-form">
+                <textarea id="message" class="composer-input" rows="1"
+                          placeholder="Message #open-chat" maxlength="1000"></textarea>
+                <button type="submit" class="composer-send" aria-label="Send message">
+                    <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M3 20.5v-6l8-2.5-8-2.5v-6l19 8.5z"/></svg>
+                </button>
+            </form>
+        </footer>
     </div>
-</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.4.0/sockjs.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
-<script src="./js/script.js"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.4.0/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <script src="./js/script.js"></script>
 </body>
 </html>

@@ -1,19 +1,24 @@
 package com.example.understandingnetworking.entity;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class ChatMessages {
-    @Getter
+
     private String content;
-    @Getter
     private String sender;
-    @Getter
     private MessageType type;
-    @Getter
     private String time;
 
-    public enum MessageType{
+    public enum MessageType {
         CHAT,
         CONNECT,
         DISCONNECT
