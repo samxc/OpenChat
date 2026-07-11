@@ -1,0 +1,21 @@
+name: CI # display name, shown in the Actions tab
+
+on: # WHEN to run — the triggers
+  push:
+    branches: [master] # every push to master
+  pull_request:
+    branches: [master] # and every PR targeting master
+
+jobs:
+  build-and-test: # a job (id is yours to name)
+    name: Build & test
+    runs-on: ubuntu-latest # a fresh Ubuntu VM, created new for every run
+
+    steps:
+      - uses: actions/checkout@v4 # clone your repo onto the runner
+      - uses: actions/setup-java@v4 # install JDK 26 + set JAVA_HOME
+        with:
+          distribution: temurin
+          java-version: "26"
+          cache: maven # cache dependencies for faster future runs
+      - run: mvn -B clean test # YOUR build — compile + run all tests
