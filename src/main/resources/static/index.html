@@ -9,8 +9,27 @@
 </head>
 <body>
 
+    <!-- ===== Storage consent (shown on load) ===== -->
+    <div id="consent" class="consent-overlay">
+        <div class="consent-card">
+            <div class="consent-icon">🔗</div>
+            <h1 class="consent-title">How OpenChat handles your files</h1>
+            <p class="consent-text">
+                OpenChat has <b>no central storage</b>. Photos, videos, and files you send are
+                shared <b>peer-to-peer</b> and held on <b>your own device</b> while you're online —
+                nothing is uploaded to a server.
+            </p>
+            <ul class="consent-list">
+                <li>A file stays viewable in the chat <b>as long as at least one person who has it is online</b>.</li>
+                <li>When you close the tab, the files <b>you</b> shared stop being available to others until you return.</li>
+                <li>Anyone who already viewed a file keeps their own copy — sharing can't be "un-sent".</li>
+            </ul>
+            <button id="consent-ok" class="consent-button">I understand — continue</button>
+        </div>
+    </div>
+
     <!-- ===== Login screen ===== -->
-    <div id="login" class="login-overlay">
+    <div id="login" class="login-overlay hidden">
         <form id="login-form" class="login-card" autocomplete="off">
             <div class="login-logo">💬</div>
             <h1 class="login-title">OpenChat</h1>
@@ -26,28 +45,34 @@
         <header class="chat-header">
             <span class="chat-hash">#</span>
             <span class="chat-channel">open-chat</span>
-            <span class="chat-topic">Say hi to everyone online</span>
+            <span class="chat-topic">Peer-to-peer · files shared from your device</span>
         </header>
 
         <main id="chat" class="chat-messages">
             <div class="welcome">
                 <div class="welcome-icon">#</div>
                 <h2>Welcome to #open-chat</h2>
-                <p>This is the start of the channel. Be nice. 👋</p>
+                <p>This is the start of the channel. Files are shared directly between members. 👋</p>
             </div>
         </main>
 
         <footer class="chat-composer">
             <form id="message-form" class="composer-form">
+                <input type="file" id="file-input" hidden>
+                <button type="button" id="attach-btn" class="composer-attach" aria-label="Attach a file" title="Share a photo, video, audio or file">
+                    <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M16.5 6.5v9.75a4.75 4.75 0 0 1-9.5 0V5.5a3 3 0 0 1 6 0v10.25a1.25 1.25 0 0 1-2.5 0V6.5H9v9.25a2.75 2.75 0 0 0 5.5 0V5.5a4.5 4.5 0 0 0-9 0v10.75a6.25 6.25 0 0 0 12.5 0V6.5z"/></svg>
+                </button>
                 <textarea id="message" class="composer-input" rows="1"
                           placeholder="Message #open-chat" maxlength="1000"></textarea>
                 <button type="submit" class="composer-send" aria-label="Send message">
                     <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M3 20.5v-6l8-2.5-8-2.5v-6l19 8.5z"/></svg>
                 </button>
             </form>
+            <div id="upload-status" class="upload-status hidden"></div>
         </footer>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/webtorrent@1.9.7/webtorrent.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.4.0/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <script src="./js/script.js"></script>
