@@ -33,7 +33,11 @@
         <form id="login-form" class="login-card" autocomplete="off">
             <div class="login-logo">💬</div>
             <h1 class="login-title">OpenChat</h1>
-            <p class="login-subtitle">Pick a name to jump into the conversation.<br>No sign-up needed.</p>
+            <p class="login-subtitle">Pick a name and a photo, then jump in.<br>No sign-up needed.</p>
+            <input type="file" id="avatar-input" accept="image/*" hidden>
+            <button type="button" id="avatar-picker" class="avatar-picker" title="Choose a profile picture (optional)">
+                <span class="avatar-picker-hint">＋<br><small>Photo</small></span>
+            </button>
             <input id="username" class="login-input" type="text" placeholder="Enter a username" maxlength="20" autocomplete="off" required>
             <button type="submit" class="login-button">Join chat</button>
             <p id="login-error" class="login-error"></p>

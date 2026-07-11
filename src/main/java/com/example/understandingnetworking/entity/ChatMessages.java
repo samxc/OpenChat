@@ -18,6 +18,9 @@ public class ChatMessages {
     private MessageType type;
     private String time;
 
+    // Optional small profile picture (a resized image data-URL); applies to the sender.
+    private String avatar;
+
     // Populated only when type == FILE.
     // Files are shared peer-to-peer (WebTorrent); we broadcast only the magnet link,
     // never the bytes. The actual file lives in the sender's browser while they're online.

@@ -19,6 +19,7 @@ public class ChatController {
     private static final int MAX_FILENAME = 255;
     private static final int MAX_TYPE = 100;
     private static final int MAX_MAGNET = 4000;
+    private static final int MAX_AVATAR = 50000; // small resized data-URL thumbnail
 
     private final RateLimiter rateLimiter;
 
@@ -31,42 +32,42 @@ public class ChatController {
     public ChatMessages registerUser(@Payload ChatMessages incoming, SimpMessageHeaderAccessor headers) {
         String username = sanitize(incoming.getSender(), MAX_NAME);
         if (username == null || username.isBlank()) {
-            return null; // reject nameless registrations — nothing is broadcast
+            return null;
         }
-        // Remember the name on the session; every later message uses THIS, not the payload.
-        Objects.requireNonNull(headers.getSessionAttributes()).put("username", username);
+        String avatar = validAvatar(incoming.getAvatar());
+
+        // Remember name + avatar on the session; every later message uses THESE.
+        Map<String, Object> attrs = Objects.requireNonNull(headers.getSessionAttributes());
+        attrs.put("username", username);
+        attrs.put("avatar", avatar);
 
         ChatMessages out = new ChatMessages();
         out.setType(ChatMessages.MessageType.CONNECT);
         out.setSender(username);
+        out.setAvatar(avatar);
         return out;
     }
 
     @MessageMapping("/chat.send")
     @SendTo("/topic/public")
     public ChatMessages sendMessage(@Payload ChatMessages incoming, SimpMessageHeaderAccessor headers) {
-        // 1) Flood protection.
         if (!rateLimiter.allow(headers.getSessionId())) {
             return null;
         }
-
-        // 2) Identity is taken from the session, NOT the client payload. This stops a
-        //    connected user from spoofing someone else's name on a per-message basis.
         String sender = sessionUsername(headers);
         if (sender == null) {
-            return null; // not registered → ignore
+            return null;
         }
 
-        // 3) Rebuild the outgoing message from scratch so the client can only influence
-        //    fields we explicitly copy and validate — never anything else.
         ChatMessages out = new ChatMessages();
         out.setSender(sender);
+        out.setAvatar(sessionAvatar(headers)); // avatar comes from the session, like the name
         out.setTime(sanitize(incoming.getTime(), 20));
 
         if (incoming.getType() == ChatMessages.MessageType.FILE) {
             String magnet = incoming.getMagnetUri();
             if (magnet == null || !magnet.startsWith("magnet:") || magnet.length() > MAX_MAGNET) {
-                return null; // a FILE message must carry a valid magnet link
+                return null;
             }
             out.setType(ChatMessages.MessageType.FILE);
             out.setMagnetUri(magnet);
@@ -77,7 +78,7 @@ public class ChatController {
         } else {
             String content = sanitize(incoming.getContent(), MAX_CONTENT);
             if (content == null || content.isBlank()) {
-                return null; // no empty chat messages
+                return null;
             }
             out.setType(ChatMessages.MessageType.CHAT);
             out.setContent(content);
@@ -90,6 +91,11 @@ public class ChatController {
         return attrs == null ? null : (String) attrs.get("username");
     }
 
+    private String sessionAvatar(SimpMessageHeaderAccessor headers) {
+        Map<String, Object> attrs = headers.getSessionAttributes();
+        return attrs == null ? null : (String) attrs.get("avatar");
+    }
+
     /** Trim, and hard-cap the length so no field can be abused to bloat a message. */
     private static String sanitize(String input, int maxLen) {
         if (input == null) {
@@ -97,5 +103,16 @@ public class ChatController {
         }
         String trimmed = input.strip();
         return trimmed.length() > maxLen ? trimmed.substring(0, maxLen) : trimmed;
+    }
+
+    /** Accept only a small image data-URL as an avatar; otherwise no custom avatar. */
+    private static String validAvatar(String avatar) {
+        if (avatar == null) {
+            return null;
+        }
+        if (!avatar.startsWith("data:image/") || avatar.length() > MAX_AVATAR) {
+            return null;
+        }
+        return avatar;
     }
 }

@@ -428,3 +428,24 @@ html, body {
     flex: 0 0 16px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== Avatar picker (login) ===== */
+.avatar-picker {
+    width: 84px; height: 84px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    border: 2px dashed #5c5f66;
+    background: #1e1f22 center/cover no-repeat;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.15s, color 0.15s;
+}
+.avatar-picker:hover { border-color: var(--accent); color: var(--text-strong); }
+.avatar-picker.has-image { border-style: solid; border-color: var(--accent); }
+.avatar-picker.has-image .avatar-picker-hint { display: none; }
+.avatar-picker-hint { font-size: 20px; line-height: 1.1; text-align: center; }
+.avatar-picker-hint small { font-size: 11px; }
+
+/* Photo avatars on messages crop to a circle */
+img.msg-avatar { object-fit: cover; }

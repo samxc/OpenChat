@@ -11,6 +11,7 @@
 let stompClient = null;
 let username = null;
 let torrentClient = null;
+let myAvatar = null;   // resized image data-URL, or null for the default initial
 
 const consentPage  = document.getElementById('consent');
 const consentOk    = document.getElementById('consent-ok');
@@ -25,6 +26,8 @@ const chatEl       = document.getElementById('chat');
 const fileInput    = document.getElementById('file-input');
 const attachBtn    = document.getElementById('attach-btn');
 const uploadStatus = document.getElementById('upload-status');
+const avatarInput  = document.getElementById('avatar-input');
+const avatarPicker = document.getElementById('avatar-picker');
 
 const MAX_FILE_BYTES = 200 * 1024 * 1024; // 200MB — P2P, so no server limit; just keep memory sane
 
@@ -68,7 +71,7 @@ const connect = (event) => {
 const onConnected = () => {
     stompClient.subscribe('/topic/public', onMessageReceived);
     stompClient.send('/app/chat.registerUser', {},
-        JSON.stringify({ sender: username, type: 'CONNECT' })
+        JSON.stringify({ sender: username, avatar: myAvatar, type: 'CONNECT' })
     );
     removeStatusPill();
 };
@@ -145,10 +148,7 @@ const renderChatMessage = (message) => {
     const row = document.createElement('div');
     row.className = 'msg';
 
-    const avatar = document.createElement('div');
-    avatar.className = 'msg-avatar';
-    avatar.style.backgroundColor = avatarColor(message.sender);
-    avatar.textContent = initial(message.sender);
+    const avatar = buildAvatar(message);
 
     const body = document.createElement('div');
     body.className = 'msg-body';
@@ -310,6 +310,44 @@ const renderSystemMessage = (sender, action, kind) => {
 
 const initial = (name) => (name && name.length ? name[0] : '?');
 
+// A photo avatar if the sender set one, otherwise the colored-initial circle.
+const buildAvatar = (message) => {
+    if (message.avatar) {
+        const img = document.createElement('img');
+        img.className = 'msg-avatar';
+        img.src = message.avatar;
+        img.alt = message.sender || '';
+        return img;
+    }
+    const div = document.createElement('div');
+    div.className = 'msg-avatar';
+    div.style.backgroundColor = avatarColor(message.sender);
+    div.textContent = initial(message.sender);
+    return div;
+};
+
+// Shrink a chosen image to a small square JPEG data-URL for use as an avatar.
+const resizeToAvatar = (file, cb) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            const size = 96;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const min = Math.min(img.width, img.height);
+            const sx = (img.width - min) / 2;
+            const sy = (img.height - min) / 2;
+            ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+            cb(canvas.toDataURL('image/jpeg', 0.7));
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+};
+
 const hashCode = (str) => {
     let hash = 0;
     for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
@@ -374,6 +412,19 @@ const removeStatusPill = () => {
 loginForm.addEventListener('submit', connect);
 messageForm.addEventListener('submit', sendMessage);
 messageEl.addEventListener('input', autoGrow);
+
+// Avatar picker (login screen)
+avatarPicker.addEventListener('click', () => avatarInput.click());
+avatarInput.addEventListener('change', () => {
+    const file = avatarInput.files[0];
+    avatarInput.value = '';
+    if (!file) return;
+    resizeToAvatar(file, (dataUrl) => {
+        myAvatar = dataUrl;
+        avatarPicker.style.backgroundImage = `url(${dataUrl})`;
+        avatarPicker.classList.add('has-image');
+    });
+});
 messageEl.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
