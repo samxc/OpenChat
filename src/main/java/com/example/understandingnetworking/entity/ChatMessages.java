@@ -39,7 +39,8 @@ public class ChatMessages {
         CONNECT,
         DISCONNECT,
         FILE,
-        REACTION
+        REACTION,
+        REPLY      // a threaded reply; targetId = parent message, content = the reply text
     }
 
 }

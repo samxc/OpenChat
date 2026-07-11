@@ -91,6 +91,26 @@ class ChatControllerTest {
     }
 
     @Test
+    void replyIsRelayedWithParentAndSessionSender() {
+        SimpMessageHeaderAccessor headers = session("s1", "alice");
+        ChatMessages incoming = ChatMessages.builder()
+                .type(ChatMessages.MessageType.REPLY)
+                .targetId("parent-1")
+                .content("great point!")
+                .sender("impostor")
+                .build();
+
+        ChatMessages out = controller().sendMessage(incoming, headers);
+
+        assertNotNull(out);
+        assertEquals(ChatMessages.MessageType.REPLY, out.getType());
+        assertEquals("parent-1", out.getTargetId());
+        assertEquals("great point!", out.getContent());
+        assertEquals("alice", out.getSender());
+        assertNotNull(out.getId(), "a reply gets its own id");
+    }
+
+    @Test
     void chatMessagesAreRecordedInHistory() {
         SimpMessageHeaderAccessor headers = session("s1", "alice");
         ChatController controller = controller();

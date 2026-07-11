@@ -76,6 +76,24 @@
         </footer>
     </div>
 
+    <!-- ===== Thread / comments modal ===== -->
+    <div id="thread-modal" class="thread-overlay hidden">
+        <div class="thread-card">
+            <div class="thread-header">
+                <span id="thread-title">🧵 Thread</span>
+                <button id="thread-close" class="thread-close" aria-label="Close thread">✕</button>
+            </div>
+            <div id="thread-parent" class="thread-parent"></div>
+            <div id="thread-replies" class="thread-replies"></div>
+            <form id="thread-form" class="thread-composer">
+                <textarea id="thread-input" class="composer-input" rows="1" placeholder="Reply to thread…" maxlength="1000"></textarea>
+                <button type="submit" class="composer-send" aria-label="Send reply">
+                    <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M3 20.5v-6l8-2.5-8-2.5v-6l19 8.5z"/></svg>
+                </button>
+            </form>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/webtorrent@1.9.7/webtorrent.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.4.0/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>

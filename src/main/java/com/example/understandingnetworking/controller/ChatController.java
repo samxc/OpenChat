@@ -92,6 +92,20 @@ public class ChatController {
             return out;
         }
 
+        if (type == ChatMessages.MessageType.REPLY) {
+            String targetId = sanitize(incoming.getTargetId(), MAX_ID);
+            String content = sanitize(incoming.getContent(), MAX_CONTENT);
+            if (targetId == null || targetId.isBlank() || content == null || content.isBlank()) {
+                return null;
+            }
+            out.setId(UUID.randomUUID().toString());
+            out.setType(ChatMessages.MessageType.REPLY);
+            out.setTargetId(targetId);
+            out.setContent(content);
+            history.add(out);
+            return out;
+        }
+
         if (type == ChatMessages.MessageType.FILE) {
             String magnet = incoming.getMagnetUri();
             if (magnet == null || !magnet.startsWith("magnet:") || magnet.length() > MAX_MAGNET) {

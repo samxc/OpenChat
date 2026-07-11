@@ -28,6 +28,13 @@ const attachBtn    = document.getElementById('attach-btn');
 const uploadStatus = document.getElementById('upload-status');
 const avatarInput  = document.getElementById('avatar-input');
 const avatarPicker = document.getElementById('avatar-picker');
+const threadModal   = document.getElementById('thread-modal');
+const threadParent  = document.getElementById('thread-parent');
+const threadReplies = document.getElementById('thread-replies');
+const threadForm    = document.getElementById('thread-form');
+const threadInput   = document.getElementById('thread-input');
+const threadClose   = document.getElementById('thread-close');
+const threadTitle   = document.getElementById('thread-title');
 
 const MAX_FILE_BYTES = 200 * 1024 * 1024; // 200MB — P2P, so no server limit; just keep memory sane
 
@@ -146,6 +153,8 @@ const onMessageReceived = (payload) => {
         scrollToBottom();
     } else if (message.type === 'REACTION') {
         applyReaction(message);
+    } else if (message.type === 'REPLY') {
+        applyReply(message);
     } else {
         renderChatMessage(message);
         scrollToBottom();
@@ -188,16 +197,24 @@ const renderChatMessage = (message) => {
     }
 
     if (message.id) {
+        const actions = document.createElement('div');
+        actions.className = 'msg-actions';
         const reactionsEl = document.createElement('div');
         reactionsEl.className = 'reactions';
-        body.appendChild(reactionsEl);
-        messagesById[message.id] = { reactionsEl, reactions: {} };
+        const threadEl = document.createElement('div');
+        threadEl.className = 'thread-summary';
+        actions.append(reactionsEl, threadEl);
+        body.appendChild(actions);
+        messagesById[message.id] = { message, reactionsEl, reactions: {}, threadEl, replies: [] };
     }
 
     row.append(avatar, body);
     chatEl.appendChild(row);
 
-    if (message.id) renderReactions(message.id);
+    if (message.id) {
+        renderReactions(message.id);
+        renderThreadSummary(message.id);
+    }
 };
 
 const loadAttachment = (slot, message) => {
@@ -343,6 +360,11 @@ const renderReactions = (id) => {
         el.appendChild(pill);
     });
 
+    // Add-reaction button with a popover picker (absolutely positioned, so opening it
+    // never shifts the row). Picking closes it; only one picker is ever open.
+    const addWrap = document.createElement('span');
+    addWrap.className = 'reaction-add-wrap';
+
     const add = document.createElement('button');
     add.className = 'reaction-add';
     add.textContent = '＋';
@@ -360,9 +382,18 @@ const renderReactions = (id) => {
         });
         picker.appendChild(choice);
     });
-    add.addEventListener('click', () => picker.classList.toggle('hidden'));
+    add.addEventListener('click', () => {
+        const wasHidden = picker.classList.contains('hidden');
+        closeAllPickers();
+        if (wasHidden) picker.classList.remove('hidden');
+    });
 
-    el.append(add, picker);
+    addWrap.append(add, picker);
+    el.appendChild(addWrap);
+};
+
+const closeAllPickers = () => {
+    document.querySelectorAll('.reaction-picker').forEach((p) => p.classList.add('hidden'));
 };
 
 const sendReaction = (id, emoji) => {
@@ -376,19 +407,115 @@ const sendReaction = (id, emoji) => {
 const applyReaction = (message) => {
     const entry = messagesById[message.targetId];
     if (!entry) return; // reacting to a message we don't have (e.g. joined later) — ignore
+
     const emoji = message.emoji;
-    let set = entry.reactions[emoji];
-    if (!set) {
-        set = new Set();
-        entry.reactions[emoji] = set;
+    const sender = message.sender;
+    const alreadyThisEmoji = entry.reactions[emoji] && entry.reactions[emoji].has(sender);
+
+    // One reaction per person: clear this user from every emoji on the message first.
+    Object.keys(entry.reactions).forEach((e) => {
+        entry.reactions[e].delete(sender);
+        if (entry.reactions[e].size === 0) delete entry.reactions[e];
+    });
+
+    // Re-adding the same emoji is a toggle-off; a different emoji switches to it.
+    if (!alreadyThisEmoji) {
+        if (!entry.reactions[emoji]) entry.reactions[emoji] = new Set();
+        entry.reactions[emoji].add(sender);
     }
-    if (set.has(message.sender)) {
-        set.delete(message.sender);
-    } else {
-        set.add(message.sender);
-    }
-    if (set.size === 0) delete entry.reactions[emoji];
     renderReactions(message.targetId);
+};
+
+/* ---------- Threads ---------- */
+
+let currentThreadId = null;
+
+const renderThreadSummary = (id) => {
+    const entry = messagesById[id];
+    if (!entry) return;
+    const el = entry.threadEl;
+    el.replaceChildren();
+    const n = entry.replies.length;
+    const isFile = entry.message && entry.message.type === 'FILE';
+    const noun = isFile ? 'comment' : 'reply';
+    const btn = document.createElement('button');
+    btn.className = 'thread-btn' + (n > 0 ? ' has-replies' : '');
+    if (n > 0) {
+        btn.textContent = `💬 ${n} ${n === 1 ? noun : noun + 's'}`;
+    } else {
+        btn.textContent = isFile ? '💬 Comment' : '💬 Reply';
+    }
+    btn.addEventListener('click', () => openThread(id));
+    el.appendChild(btn);
+};
+
+const openThread = (id) => {
+    const entry = messagesById[id];
+    if (!entry) return;
+    currentThreadId = id;
+    if (threadTitle) {
+        threadTitle.textContent = entry.message.type === 'FILE' ? '💬 Comments' : '🧵 Thread';
+    }
+    threadParent.replaceChildren(renderThreadMessage(entry.message));
+    renderThreadReplies(id);
+    threadModal.classList.remove('hidden');
+    threadInput.focus();
+};
+
+const closeThread = () => {
+    currentThreadId = null;
+    threadModal.classList.add('hidden');
+};
+
+const renderThreadReplies = (id) => {
+    const entry = messagesById[id];
+    if (!entry) return;
+    threadReplies.replaceChildren();
+    entry.replies.forEach((reply) => threadReplies.appendChild(renderThreadMessage(reply)));
+    threadReplies.scrollTop = threadReplies.scrollHeight;
+};
+
+const renderThreadMessage = (msg) => {
+    const row = document.createElement('div');
+    row.className = 'thread-msg';
+
+    const avatar = buildAvatar(msg);
+
+    const body = document.createElement('div');
+    body.className = 'msg-body';
+    const head = document.createElement('div');
+    head.className = 'msg-head';
+    const author = document.createElement('span');
+    author.className = 'msg-author';
+    author.style.color = avatarColor(msg.sender);
+    author.textContent = msg.sender;
+    const time = document.createElement('span');
+    time.className = 'msg-time';
+    time.textContent = msg.time || '';
+    head.append(author, time);
+
+    const text = document.createElement('div');
+    text.className = 'msg-text';
+    text.textContent = msg.type === 'FILE' ? ('📎 ' + (msg.fileName || 'file')) : (msg.content || '');
+
+    body.append(head, text);
+    row.append(avatar, body);
+    return row;
+};
+
+const sendReply = (id, text) => {
+    if (!stompClient || !text) return;
+    stompClient.send('/app/chat.send', {}, JSON.stringify({
+        type: 'REPLY', targetId: id, content: text, time: nowTime()
+    }));
+};
+
+const applyReply = (message) => {
+    const entry = messagesById[message.targetId];
+    if (!entry) return; // parent not present (joined before its history) — ignore
+    entry.replies.push(message);
+    renderThreadSummary(message.targetId);
+    if (currentThreadId === message.targetId) renderThreadReplies(message.targetId);
 };
 
 /* ---------- Helpers ---------- */
@@ -509,6 +636,28 @@ avatarInput.addEventListener('change', () => {
         avatarPicker.style.backgroundImage = `url(${dataUrl})`;
         avatarPicker.classList.add('has-image');
     });
+});
+
+// Thread modal
+threadClose.addEventListener('click', closeThread);
+threadModal.addEventListener('click', (e) => { if (e.target === threadModal) closeThread(); });
+threadForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = threadInput.value.trim();
+    if (!text || !currentThreadId) return;
+    sendReply(currentThreadId, text);
+    threadInput.value = '';
+});
+threadInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        threadForm.requestSubmit();
+    }
+});
+
+// Close any open reaction picker when clicking outside of it.
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.reaction-add-wrap')) closeAllPickers();
 });
 messageEl.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
