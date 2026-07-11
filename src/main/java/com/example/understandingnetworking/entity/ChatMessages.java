@@ -13,6 +13,7 @@ import lombok.Setter;
 @Builder
 public class ChatMessages {
 
+    private String id;         // unique id the server assigns to each CHAT / FILE message
     private String content;
     private String sender;
     private MessageType type;
@@ -29,11 +30,16 @@ public class ChatMessages {
     private String fileType;   // MIME type, e.g. "image/png"
     private Long fileSize;     // bytes
 
+    // Populated only when type == REACTION.
+    private String targetId;   // the id of the message being reacted to
+    private String emoji;      // the reaction emoji, e.g. "👍"
+
     public enum MessageType {
         CHAT,
         CONNECT,
         DISCONNECT,
-        FILE
+        FILE,
+        REACTION
     }
 
 }

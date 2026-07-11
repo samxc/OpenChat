@@ -449,3 +449,68 @@ html, body {
 
 /* Photo avatars on messages crop to a circle */
 img.msg-avatar { object-fit: cover; }
+
+/* ===== Reactions ===== */
+.reactions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+}
+.reaction-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 9px;
+    height: 26px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: #2b2d31;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+}
+.reaction-pill:hover { background: #34363c; }
+.reaction-pill.mine {
+    background: rgba(88, 101, 242, 0.18);
+    border-color: var(--accent);
+    color: #c9cdfb;
+}
+.reaction-add {
+    width: 26px; height: 26px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    opacity: 0;
+    transition: opacity 0.12s, background 0.12s;
+}
+.msg:hover .reaction-add,
+.reaction-add:focus { opacity: 1; }
+.reaction-add:hover { background: #34363c; color: var(--text-strong); }
+
+.reaction-picker {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px 5px;
+    background: #232428;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+}
+.reaction-picker.hidden { display: none; }
+.reaction-choice {
+    border: none;
+    background: transparent;
+    font-size: 17px;
+    line-height: 1;
+    padding: 3px 4px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.reaction-choice:hover { background: #3a3d43; }

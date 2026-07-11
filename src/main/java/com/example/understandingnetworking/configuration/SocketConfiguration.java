@@ -30,7 +30,9 @@ public class SocketConfiguration implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker("/topic");
+        // "/topic" = broadcast to everyone; "/queue" = private, per-user destinations
+        // (used to replay message history to a single newly-joined session).
+        registry.enableSimpleBroker("/topic", "/queue");
         registry.setApplicationDestinationPrefixes("/app");
     }
 

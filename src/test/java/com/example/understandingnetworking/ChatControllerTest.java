@@ -1,10 +1,12 @@
 package com.example.understandingnetworking;
 
+import com.example.understandingnetworking.chat.MessageHistory;
 import com.example.understandingnetworking.controller.ChatController;
 import com.example.understandingnetworking.entity.ChatMessages;
 import com.example.understandingnetworking.security.RateLimiter;
 import org.junit.jupiter.api.Test;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -12,16 +14,18 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
 
 /**
- * Fast, deterministic unit tests for the chat controller. These replace an earlier
- * end-to-end WebSocket test that was flaky on CI (a subscribe/broadcast timing race):
- * here we call the controller directly with a stubbed session — no network, no timing.
+ * Fast, deterministic unit tests for the chat controller — no network, no timing.
+ * The messaging template (used for private history replay) is a mock.
  */
 class ChatControllerTest {
 
+    private final MessageHistory history = new MessageHistory();
+
     private ChatController controller() {
-        return new ChatController(new RateLimiter());
+        return new ChatController(new RateLimiter(), history, mock(SimpMessagingTemplate.class));
     }
 
     private SimpMessageHeaderAccessor session(String sessionId, String username) {
@@ -55,7 +59,7 @@ class ChatControllerTest {
     void sendMessageStampsSenderFromSessionNotFromPayload() {
         SimpMessageHeaderAccessor headers = session("s1", "alice");
         ChatMessages incoming = ChatMessages.builder()
-                .sender("i-am-an-impostor")   // the server must ignore this
+                .sender("i-am-an-impostor")
                 .content("hello world")
                 .type(ChatMessages.MessageType.CHAT)
                 .build();
@@ -65,6 +69,38 @@ class ChatControllerTest {
         assertNotNull(out);
         assertEquals("hello world", out.getContent());
         assertEquals("alice", out.getSender(), "server must use the session's name, not the payload's");
+    }
+
+    @Test
+    void reactionIsRelayedWithSessionSender() {
+        SimpMessageHeaderAccessor headers = session("s1", "alice");
+        ChatMessages incoming = ChatMessages.builder()
+                .type(ChatMessages.MessageType.REACTION)
+                .targetId("msg-123")
+                .emoji("👍")
+                .sender("impostor")
+                .build();
+
+        ChatMessages out = controller().sendMessage(incoming, headers);
+
+        assertNotNull(out);
+        assertEquals(ChatMessages.MessageType.REACTION, out.getType());
+        assertEquals("msg-123", out.getTargetId());
+        assertEquals("👍", out.getEmoji());
+        assertEquals("alice", out.getSender());
+    }
+
+    @Test
+    void chatMessagesAreRecordedInHistory() {
+        SimpMessageHeaderAccessor headers = session("s1", "alice");
+        ChatController controller = controller();
+
+        controller.sendMessage(ChatMessages.builder().content("first").type(ChatMessages.MessageType.CHAT).build(), headers);
+        controller.sendMessage(ChatMessages.builder().content("second").type(ChatMessages.MessageType.CHAT).build(), headers);
+
+        assertEquals(2, history.size());
+        assertEquals("first", history.snapshot().get(0).getContent());
+        assertEquals("second", history.snapshot().get(1).getContent());
     }
 
     @Test

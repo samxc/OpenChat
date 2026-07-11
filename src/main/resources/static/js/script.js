@@ -36,6 +36,9 @@ const AVATAR_COLORS = [
     '#faa61a', '#3ba55d', '#9b59b6', '#e67e22'
 ];
 
+const QUICK_EMOJIS = ['👍', '👎', '❤️', '😂', '😮', '🔥'];
+const messagesById = {}; // id -> { reactionsEl, reactions: { emoji: Set<sender> } }
+
 /* ---------- Consent gate ---------- */
 
 consentOk.addEventListener('click', () => {
@@ -69,7 +72,10 @@ const connect = (event) => {
 };
 
 const onConnected = () => {
+    // Live broadcasts for everyone...
     stompClient.subscribe('/topic/public', onMessageReceived);
+    // ...and a private feed the server uses to replay history just to us (catch-up on join).
+    stompClient.subscribe('/user/queue/history', onMessageReceived);
     stompClient.send('/app/chat.registerUser', {},
         JSON.stringify({ sender: username, avatar: myAvatar, type: 'CONNECT' })
     );
@@ -134,12 +140,16 @@ const onMessageReceived = (payload) => {
 
     if (message.type === 'CONNECT') {
         renderSystemMessage(message.sender, 'joined the chat', 'join');
+        scrollToBottom();
     } else if (message.type === 'DISCONNECT') {
         renderSystemMessage(message.sender, 'left the chat', 'leave');
+        scrollToBottom();
+    } else if (message.type === 'REACTION') {
+        applyReaction(message);
     } else {
         renderChatMessage(message);
+        scrollToBottom();
     }
-    scrollToBottom();
 };
 
 /* ---------- Rendering ---------- */
@@ -177,8 +187,17 @@ const renderChatMessage = (message) => {
         body.appendChild(text);
     }
 
+    if (message.id) {
+        const reactionsEl = document.createElement('div');
+        reactionsEl.className = 'reactions';
+        body.appendChild(reactionsEl);
+        messagesById[message.id] = { reactionsEl, reactions: {} };
+    }
+
     row.append(avatar, body);
     chatEl.appendChild(row);
+
+    if (message.id) renderReactions(message.id);
 };
 
 const loadAttachment = (slot, message) => {
@@ -304,6 +323,72 @@ const renderSystemMessage = (sender, action, kind) => {
     time.textContent = nowTime();
     row.append(arrow, name, label, time);
     chatEl.appendChild(row);
+};
+
+/* ---------- Reactions ---------- */
+
+const renderReactions = (id) => {
+    const entry = messagesById[id];
+    if (!entry) return;
+    const el = entry.reactionsEl;
+    el.replaceChildren();
+
+    Object.keys(entry.reactions).forEach((emoji) => {
+        const set = entry.reactions[emoji];
+        if (!set || set.size === 0) return;
+        const pill = document.createElement('button');
+        pill.className = 'reaction-pill' + (set.has(username) ? ' mine' : '');
+        pill.textContent = `${emoji} ${set.size}`;
+        pill.addEventListener('click', () => sendReaction(id, emoji));
+        el.appendChild(pill);
+    });
+
+    const add = document.createElement('button');
+    add.className = 'reaction-add';
+    add.textContent = '＋';
+    add.title = 'Add reaction';
+
+    const picker = document.createElement('span');
+    picker.className = 'reaction-picker hidden';
+    QUICK_EMOJIS.forEach((emoji) => {
+        const choice = document.createElement('button');
+        choice.className = 'reaction-choice';
+        choice.textContent = emoji;
+        choice.addEventListener('click', () => {
+            sendReaction(id, emoji);
+            picker.classList.add('hidden');
+        });
+        picker.appendChild(choice);
+    });
+    add.addEventListener('click', () => picker.classList.toggle('hidden'));
+
+    el.append(add, picker);
+};
+
+const sendReaction = (id, emoji) => {
+    if (!stompClient) return;
+    stompClient.send('/app/chat.send', {}, JSON.stringify({
+        type: 'REACTION', targetId: id, emoji: emoji
+    }));
+};
+
+// Every client applies the same toggle on the same event stream, so counts converge.
+const applyReaction = (message) => {
+    const entry = messagesById[message.targetId];
+    if (!entry) return; // reacting to a message we don't have (e.g. joined later) — ignore
+    const emoji = message.emoji;
+    let set = entry.reactions[emoji];
+    if (!set) {
+        set = new Set();
+        entry.reactions[emoji] = set;
+    }
+    if (set.has(message.sender)) {
+        set.delete(message.sender);
+    } else {
+        set.add(message.sender);
+    }
+    if (set.size === 0) delete entry.reactions[emoji];
+    renderReactions(message.targetId);
 };
 
 /* ---------- Helpers ---------- */
